@@ -1,0 +1,98 @@
+---
+title: "DATA607_Final Project"
+author: Charles Ugiagbe
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+library(plotly)
+library(readr)
+library(tibble)
+library(gridExtra)
+library(scales)
+library(lubridate)
+library(ggrepel)
+library(leaflet)
+library(rgdal)
+```
+
+
+
+```{r}
+url <- "https://raw.githubusercontent.com/omocharly/DATA607_PROJECTS/main/Gun_violence_2021.csv"
+gun <- read.csv(url)
+head(gun)
+```
+
+```{r}
+str(gun)
+```
+
+Rename the column
+```{r}
+gun <- gun %>% rename(Incident_id = Incident.ID, Incident_date = Incident.Date, City = City.Or.County, No_killed = X..Killed, No_injured = X..Injured)
+```
+
+                                         
+Reformat the date
+```{r}
+gun$Incident_date <- ymd(gun$Incident_date)
+str(gun$Incident_date)
+summary(gun$Incident_date)
+```
+
+###   Gun Violence incident by Week
+
+```{r}
+
+gun$weekday <- wday(gun$Incident_date, label=TRUE)
+
+gun %>% count(weekday) %>%
+      ggplot(aes(x=weekday, y=n)) + geom_bar(stat='identity', fill='red') +
+        scale_y_continuous(labels=comma) +
+        labs(x='Weekday', y='Number of incidents', title='Incidents by Weekday')
+```
+
+###     Gun violence incident by Month
+
+```{r}
+gun$month <- month(gun$Incident_date, label=TRUE)
+
+gun %>% count(month) %>%
+      ggplot(aes(x=month, y=n)) + geom_bar(stat='identity', fill='purple') +
+        scale_y_continuous(labels=comma) +
+        labs(x='month', y='Number of incidents', title='Incidents by month')
+```
+
+###   Gun Violence Incident by State.
+
+```{r}
+plotly::ggplotly(gun %>% count(State) %>%
+        ggplot(aes(x=reorder(State, n), y=n, fill=n, text=State)) +
+        geom_bar(stat='identity', fill='red') + coord_flip() +
+        labs(x='', y='Number of incidents'),
+         tooltip=c("text", "y"))
+       
+```
+
+###   Victims by state
+
+```{r}
+gun$victims <- gun$No_killed + gun$No_injured
+
+VictimsByState <- gun %>% group_by(State) %>% summarize(sumVic=sum(victims), sumInj=sum(No_injured), sumDeath=sum(No_killed), PercDeath=round(sumDeath/sumVic,2), sumIncidents=n(), vicPerInc=round(sumVic/sumIncidents,2))
+head(VictimsByState)
+
+```
+
+
+```{r}
+VictimsByState %>% filter(vicPerInc>4
+                          ) %>%
+        ggplot(aes(x=reorder(State, -vicPerInc), y=vicPerInc)) + geom_bar(stat='identity', fill='red') +
+        labs(x='State', y='Victims per incidents') +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
