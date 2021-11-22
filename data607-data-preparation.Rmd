@@ -1,0 +1,127 @@
+---
+title: "Gun Violence Data Preparation"
+author: "Chinedu, Charles, Coffy"
+date: "11/27/2021"
+output: html_document
+---
+
+
+```{r load-libraries, message=FALSE}
+# Load Libraries
+library(tidyverse)
+library(lubridate)
+library(stringr)
+library(leaflet)
+library(sp)
+library(ggmap)
+library(leaflet.extras)
+library(htmltools)
+```
+
+
+<center> <h2> DATA PREPARATION </h2> </center>
+
+**Data Collection**: We downloaded eight(8) years of data from [GVA](https://www.gunviolencearchive.org/) and combined all into a single dataframe. The data collected does not have longitute and latitude for the locations, so we used the google API to obtain the lon and lat values for all 3335 observations.
+```{r read-file, message=FALSE}
+# read the data
+mass_shooting2014 <- read_csv("https://raw.githubusercontent.com/chinedu2301/data607-project-gun-violence/main/Data/mass%20shootings%202014.csv")
+mass_shooting2015 <- read_csv("https://raw.githubusercontent.com/chinedu2301/data607-project-gun-violence/main/Data/mass%20shootings%202015.csv")
+mass_shooting2016 <- read_csv("https://raw.githubusercontent.com/chinedu2301/data607-project-gun-violence/main/Data/mass%20shootings%202016.csv")
+mass_shooting2017 <- read_csv("https://raw.githubusercontent.com/chinedu2301/data607-project-gun-violence/main/Data/mass%20shootings%202017.csv")
+mass_shooting2018 <- read_csv("https://raw.githubusercontent.com/chinedu2301/data607-project-gun-violence/main/Data/mass%20shootings%202018.csv")
+mass_shooting2019 <- read_csv("https://raw.githubusercontent.com/chinedu2301/data607-project-gun-violence/main/Data/mass%20shootings%202019.csv")
+mass_shooting2020 <- read_csv("https://raw.githubusercontent.com/chinedu2301/data607-project-gun-violence/main/Data/mass%20shootings%202020.csv")
+mass_shooting2021 <- read_csv("https://raw.githubusercontent.com/chinedu2301/data607-project-gun-violence/main/Data/mass%20shootings%202021.csv")
+```
+
+
+```{r}
+# Combine the data-sets from 2014 to 2021
+mass_shooting <- rbind(mass_shooting2014, mass_shooting2015, mass_shooting2016, mass_shooting2017,mass_shooting2018, mass_shooting2019, mass_shooting2020, mass_shooting2021)
+head(mass_shooting, n=10)
+```
+```{r}
+# rename the columns
+headers <- c("Incident_ID", "Incident_date", "State", "City", "Address", "No_killed", "No_injured",
+             "Operations")
+colnames(mass_shooting) <- headers
+
+# Combine the Address, City, and State columns using str_c
+mass_shooting$Geo_Address <- str_c(mass_shooting$Address, ", ", mass_shooting$City, ", ", mass_shooting$State)
+
+# Convert the Incident_date column from character to date format
+mass_shooting$Incident_date <- mdy(mass_shooting$Incident_date)
+
+# Select columns needed for analysis
+mass_shooting <- mass_shooting %>% select(Incident_ID, Incident_date, State, City, Address,
+                                          No_killed, No_injured, Geo_Address, )
+
+# Check the head of the data set
+head(mass_shooting, n=10)
+```
+```{r}
+# Glimpse
+glimpse(mass_shooting)
+```
+
+```{r}
+# use google API to get the Lon and Lat for each of the Geo_Adresses
+mass_shooting_df <- mass_shooting %>% as.data.frame()
+mass_shooting2 <- mass_shooting_df %>% mutate_geocode(Geo_Address)
+head(mass_shooting2)
+```
+The google Geocode API timed-out and failed to return lon and lat values for 4 locations
+```{r}
+# convert the data frame back to tibble
+mass_shooting2_tib <- as_tibble(mass_shooting2)
+
+# filter for observations with NA values for lon
+mass_shooting_lonlat_na <- mass_shooting2_tib %>% filter(is.na(lon))
+mass_shooting_lonlat_na
+```
+
+```{r}
+# Obtain lon and lat for these four locations
+mass_shooting_lonlat_missing <- mass_shooting_lonlat_na %>% select(-c("lon", "lat")) %>%
+  mutate_geocode(Geo_Address)
+mass_shooting_lonlat_missing
+```
+
+```{r}
+# replace the NA value with the lat and lon for that location
+mass_shooting_aliceville <- geocode("1st Ave and 15th St, Aliceville, Alabama")
+mass_shooting_lonlat_missing <- mass_shooting_lonlat_missing %>% replace_na(mass_shooting_aliceville)
+mass_shooting_lonlat_missing
+```
+
+```{r}
+# Replace the observations with NA values in mass_shooting2 with their corresponding values
+for(i in mass_shooting_lonlat_missing$Incident_ID){
+  mass_shooting2[mass_shooting2$Incident_ID == i, ] = mass_shooting_lonlat_missing[mass_shooting_lonlat_missing$Incident_ID == i, ]
+}
+```
+
+```{r}
+# Check for any observations with NA values for the lon and lat
+mass_shooting2 %>% filter(is.na(lat) | is.na(lon))
+```
+
+No observation have NA values for the lon or lat.
+
+```{r}
+# Check the head of the dataframe
+head(mass_shooting2, n = 10)
+```
+```{r}
+# Check the glimpse for the final dataset
+glimpse(mass_shooting2)
+```
+
+
+
+```{r}
+write.csv(mass_shooting2, file = "mass_shooting.csv")
+```
+
+
+
