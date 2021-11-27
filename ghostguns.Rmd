@@ -1,0 +1,201 @@
+---
+title: "Webscrape, Corpus, and Visualizations - Ghost Guns"
+author: "Coffy Andrews-Guo"
+date: "11/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r package, include=FALSE, message=FALSE}
+# webscrape, data manipulation, and tidy text
+library(xml2)  # read HTML or XML
+library(tidyverse)
+library(rvest)  # parse HTML
+library(dplyr)
+library(stringr)
+library(stringi)
+library(reactable)
+
+# Sentiment analysis and word cloud
+library(syuzhet)
+library(ggplot2)
+```
+
+## Ghost Guns
+
+<span style="color: blue;">Unserialized and untraceable firearms</span>
+
+![Science \| HowStuffWorks](https://github.com/chinedu2301/data607-project-gun-violence/blob/main/ghost_guns.jpg)
+
+| What are ghost guns?
+| *Ghost guns are unserialized and untraceable firearms that are constructed by individuals using unfinished frames or receivers. They are available for purchase by anyone, including prohibited purchasers, domestic abusers, and gun traffickers -- without a background check.*
+
+| Federal Regulations
+| *The gun laws do not require a background check to purchase a ghost gun kit or parts because the receivers and frames are unfinished. An individual can legally purchase a receiver or frame that is 80-percent complete or less, then modify the parts with a drill press or power drill, a router jig, and other components into an effective and reliable firearm.*
+
+### Society Sentiment on Ghost Guns
+
+#### Webscrape Newspaper Articles with `xml2 and rvest package`
+
+URL links to newspaper articles was loaded, the header and body was individually selected with [SelectorGadget](https://selectorgadget.com/) in Chrome. The `SelectorGadget` extracted the HTML nodes for the article title and text-body.
+
+```{r federalist-header, echo=FALSE}
+
+federalist.root.html <- read_html("https://thefederalist.com/2018/08/02/3-d-printed-guns-reminder-gun-control-america-futile/")
+federalist.header <- federalist.root.html %>%
+  html_nodes(".entry-header") %>% # . indicates a class name
+  html_text(trim = TRUE) 
+ 
+federalist.header <- data.frame(federalist.header)
+#federalist.header$federalist.header <- sub("\n?", federalist.header$federalist.header)
+```
+
+```{r federalist-body}
+
+#federalist.root.html2 <- read_html("https://thefederalist.com/2018/08/02/3-d-printed-guns-reminder-gun-control-america-futile/")
+federalist.body <- federalist.root.html %>%
+  html_nodes("p") %>%  # indicates node name
+  html_text(trim = TRUE) 
+
+names(federalist.body) <- c("newspaper") # insert new column for newspaper name
+
+federalist.body <- as_tibble(federalist.body)
+
+federalist.body$newspaper <- "Federalist"
+```
+
+Conservative online magazine:
+
+Democratic: <https://www.theguardian.com/us-news/2021/may/18/california-ghost-guns-deadly-toll>
+
+```{r echo=FALSE}
+guardian.root.html <- read_html("https://www.theguardian.com/us-news/2021/may/18/california-ghost-guns-deadly-toll")
+guardian.header <- guardian.root.html %>%
+  html_nodes(".dcr-c54nb9 , .dcr-zjgnrw, .dcr-18506mk") %>% # indicates nodes name
+  html_text(trim = TRUE) 
+ 
+guardian.header
+```
+
+```{r echo=FALSE}
+guardian.body <- guardian.root.html %>%
+  html_nodes("h2 , .dcr-o5gy41") %>%  # indicates nodes name
+  html_text(trim = TRUE)
+
+names(guardian.body) <- c("newspaper")
+
+guardian.body <- as_tibble(guardian.body)
+
+guardian.body$newspaper <- "Guardian"
+```
+
+Democratic online newspaper:
+
+################################################################################ 
+
+Republican: <https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html> \#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#
+
+```{r guardian-header, echo=FALSE}
+tribune.root.html <- read_html("https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html")
+tribune.header <- tribune.root.html %>%
+  html_nodes("#fNh3v52ZjDlaLs .card") %>% # indicates nodes name
+  html_text(trim = TRUE) 
+
+tribune.header
+```
+
+```{r tribune-body, echo=FALSE}
+#tribune.root.html <- read_html("https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html")
+tribune.body<- tribune.root.html %>%
+  html_nodes(".heavy-text , .crd--cnt p") %>% # indicates nodes name
+html_text(trim = TRUE) 
+
+names(tribune.body) <- c("newspaper")
+
+tribune.body <- as_tibble(tribune.body)
+
+tribune.body$newspaper <- "Tribune"
+```
+
+Republican online newspaper:
+
+### Build Corpus
+
+```{r}
+library(tm)
+corpus <- rbind(federalist.body, guardian.body, tribune.body)
+corpus <- Corpus(VectorSource(corpus))
+
+#inspect(corpus)
+```
+
+#### Clean dataset
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+corpus_text <- tm_map(corpus[1], tolower)
+
+#inspect(corpus_text)
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+corpus_text <- tm_map(corpus_text, removePunctuation)
+corpus_text <- tm_map(corpus_text, removeNumbers)
+
+#inspect(corpus_text [1:3])
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+cleanset <- tm_map(corpus_text, removeWords, stopwords('english'))
+
+#inspect(cleanset[1:3])
+```
+
+#### Create a term-document matrix
+
+```{r text-mining, echo=FALSE}
+
+tdm <- TermDocumentMatrix(cleanset)
+tdm <- as.matrix(tdm)
+
+words <- sort(rowSums(tdm), decreasing = TRUE)
+
+df <- data.frame(word = names(words), freq = words)
+
+head(df, 5)
+```
+
+### Word Cloud
+
+```{r echo=FALSE}
+library(wordcloud)
+w <- sort(rowSums(tdm), decreasing = TRUE)
+set.seed(222)
+wordcloud(words = names(w),
+          freq = w,
+          max.words = 500,
+          random.order = F,
+          min.freq = 3,
+          colors = brewer.pal(8, 'Dark2'),
+          scale = c(6, 0.4),
+          rot.per = 0.7)
+```
+
+The above word cloud clearly shows that "gun", "guns", "ghost", "violence", and "said" are the five most important words in the Corpus.
+
+### Sentiment Analysis
+
+```{r sentiment-score, echo=FALSE}
+s <- get_nrc_sentiment(df$word)
+head(s, 5)
+```
+
+```{r sentiment-plot, echo=FALSE}
+barplot(colSums(s),
+        las = 2,
+        col = rainbow(10),
+        ylab = 'Count',
+        main = 'Sentiment Scores Issue')
+```
