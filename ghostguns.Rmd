@@ -21,41 +21,53 @@ library(reactable)
 
 # Sentiment analysis and word cloud
 library(syuzhet)
+library(tm)
 library(ggplot2)
+library(wordcloud)
 ```
 
 ## Ghost Guns
 
-<span style="color: blue;">Unserialized and untraceable firearms</span>
+[Evolving Trend - Unserialized and Untraceable FireArms]{style="color: red;"}
 
-![Science \| HowStuffWorks](https://github.com/chinedu2301/data607-project-gun-violence/blob/main/ghost_guns.jpg)
+![Science \| HowStuffWorks](ghost_guns.jpg)
 
 | What are ghost guns?
 | *Ghost guns are unserialized and untraceable firearms that are constructed by individuals using unfinished frames or receivers. They are available for purchase by anyone, including prohibited purchasers, domestic abusers, and gun traffickers -- without a background check.*
 
-| Federal Regulations
-| *The gun laws do not require a background check to purchase a ghost gun kit or parts because the receivers and frames are unfinished. An individual can legally purchase a receiver or frame that is 80-percent complete or less, then modify the parts with a drill press or power drill, a router jig, and other components into an effective and reliable firearm.*
+<br></br>  Federal Regulations
 
-### Society Sentiment on Ghost Guns
+<p>
 
-#### Webscrape Newspaper Articles with `xml2 and rvest package`
+*The gun laws do not require a background check to purchase a ghost gun kit or parts because the receivers and frames are unfinished. An individual can legally purchase a receiver or frame that is 80-percent complete or less, then modify the parts with a drill press or power drill, a router jig, and other components into an effective and reliable firearm.*
 
-URL links to newspaper articles was loaded, the header and body was individually selected with [SelectorGadget](https://selectorgadget.com/) in Chrome. The `SelectorGadget` extracted the HTML nodes for the article title and text-body.
+</p>
 
-```{r federalist-header, echo=FALSE}
+### Sentiment on Ghost Guns
 
-federalist.root.html <- read_html("https://thefederalist.com/2018/08/02/3-d-printed-guns-reminder-gun-control-america-futile/")
-federalist.header <- federalist.root.html %>%
-  html_nodes(".entry-header") %>% # . indicates a class name
-  html_text(trim = TRUE) 
- 
-federalist.header <- data.frame(federalist.header)
-#federalist.header$federalist.header <- sub("\n?", federalist.header$federalist.header)
-```
+[Webscrape Newspaper Articles with `xml2 and rvest package`]{style="color: blue;"} <br></br> URL links the selected newspaper articles was loaded, each individual text body was selected with [SelectorGadget](https://selectorgadget.com/) in Chrome. The `SelectorGadget` extracted the HTML nodes form these newspapers article text-body:
+
+<p>
+
+1.  The Federalist - [3-D Printed Guns Are A Reminder That Gun Control In America Is Futile](https://thefederalist.com/2018/08/02/3-d-printed-guns-reminder-gun-control-america-futile)
+
+    </p>
+
+    <p>
+
+    2.  The Guardian - [Ordered online, assembled at home: the deadly toll of California's 'ghost guns'](https://www.theguardian.com/us-news/2021/may/18/california-ghost-guns-deadly-toll)
+
+        </p>
+
+        <p>
+
+        3.  Chicago Tribune - [Ghost guns: What they are, and why they are an issue now](https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html)
+
+            </p>
 
 ```{r federalist-body}
 
-#federalist.root.html2 <- read_html("https://thefederalist.com/2018/08/02/3-d-printed-guns-reminder-gun-control-america-futile/")
+federalist.root.html <- read_html("https://thefederalist.com/2018/08/02/3-d-printed-guns-reminder-gun-control-america-futile/")
 federalist.body <- federalist.root.html %>%
   html_nodes("p") %>%  # indicates node name
   html_text(trim = TRUE) 
@@ -67,20 +79,8 @@ federalist.body <- as_tibble(federalist.body)
 federalist.body$newspaper <- "Federalist"
 ```
 
-Conservative online magazine:
-
-Democratic: <https://www.theguardian.com/us-news/2021/may/18/california-ghost-guns-deadly-toll>
-
-```{r echo=FALSE}
+```{r guardian-body, echo=FALSE}
 guardian.root.html <- read_html("https://www.theguardian.com/us-news/2021/may/18/california-ghost-guns-deadly-toll")
-guardian.header <- guardian.root.html %>%
-  html_nodes(".dcr-c54nb9 , .dcr-zjgnrw, .dcr-18506mk") %>% # indicates nodes name
-  html_text(trim = TRUE) 
- 
-guardian.header
-```
-
-```{r echo=FALSE}
 guardian.body <- guardian.root.html %>%
   html_nodes("h2 , .dcr-o5gy41") %>%  # indicates nodes name
   html_text(trim = TRUE)
@@ -92,23 +92,8 @@ guardian.body <- as_tibble(guardian.body)
 guardian.body$newspaper <- "Guardian"
 ```
 
-Democratic online newspaper:
-
-################################################################################ 
-
-Republican: <https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html> \#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#\#
-
-```{r guardian-header, echo=FALSE}
-tribune.root.html <- read_html("https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html")
-tribune.header <- tribune.root.html %>%
-  html_nodes("#fNh3v52ZjDlaLs .card") %>% # indicates nodes name
-  html_text(trim = TRUE) 
-
-tribune.header
-```
-
 ```{r tribune-body, echo=FALSE}
-#tribune.root.html <- read_html("https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html")
+tribune.root.html <- read_html("https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html")
 tribune.body<- tribune.root.html %>%
   html_nodes(".heavy-text , .crd--cnt p") %>% # indicates nodes name
 html_text(trim = TRUE) 
@@ -120,19 +105,21 @@ tribune.body <- as_tibble(tribune.body)
 tribune.body$newspaper <- "Tribune"
 ```
 
-Republican online newspaper:
+### Create Corpus
 
-### Build Corpus
+A corpus format will store the newspapers textual data, `.body`, for text analysis.
 
 ```{r}
-library(tm)
+
 corpus <- rbind(federalist.body, guardian.body, tribune.body)
 corpus <- Corpus(VectorSource(corpus))
 
 #inspect(corpus)
 ```
 
-#### Clean dataset
+#### Transform: Cleaning the Corpus
+
+Using the `tm package` the corpus is formatted before any analysis by performing these transformations: tolower, removePunctation, removeNumbers, and remove stopwords.
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE}
 corpus_text <- tm_map(corpus[1], tolower)
@@ -155,6 +142,8 @@ cleanset <- tm_map(corpus_text, removeWords, stopwords('english'))
 
 #### Create a term-document matrix
 
+The term-document matrix will compare all the terms or words across each document. The tdm results was sorted and summarized in a decreasing order. The selected `Ghost Guns articles`top 5 frequent words pertain to *gun, guns, ghost, said, and violence*.
+
 ```{r text-mining, echo=FALSE}
 
 tdm <- TermDocumentMatrix(cleanset)
@@ -169,8 +158,10 @@ head(df, 5)
 
 ### Word Cloud
 
+Visualization of words
+
 ```{r echo=FALSE}
-library(wordcloud)
+
 w <- sort(rowSums(tdm), decreasing = TRUE)
 set.seed(222)
 wordcloud(words = names(w),
@@ -186,6 +177,8 @@ wordcloud(words = names(w),
 The above word cloud clearly shows that "gun", "guns", "ghost", "violence", and "said" are the five most important words in the Corpus.
 
 ### Sentiment Analysis
+
+The `syuzhet package` will pull out the emotions from the selected newspaper articles. The issue of controlling the expanding ghost gun accessibility has a slightly huger negative emotion than positive. The next three emotions, fear, anger, and trust, also indicates the impact of a ghost gun as a firearm.
 
 ```{r sentiment-score, echo=FALSE}
 s <- get_nrc_sentiment(df$word)
