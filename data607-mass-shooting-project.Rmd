@@ -1,0 +1,537 @@
+---
+title: "DATA607 Project - Mass Shootings"
+author: "Chinedu Onyeka, Charles Ugiagbe, and Coffy Andrews-Guo"
+date: "12/03/2021"
+output:
+  html_document:
+    includes:
+      in_header: header.html
+    css: ./lab.css
+    highlight: pygments
+    theme: cerulean
+    toc: true
+    toc_float: true
+    code_folding: "hide"
+  pdf_document: default
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<center> <h2> INTRODUCTION </h2> </center>  
+Mass Shooting has been a problem unique to the United States mainly because of its unique laws embedded in the Second Amendment ("The Right of the people to keep and bear Arms") of the US constitution. Other developed countries do not have the extent of mass shooting in the US. In this project, we analyzed verifiable mass shooting incidents (incidents with at least four victims) obtained from the Gun Violence Archive (GVA) to determine:
+
+<li> Trend in mass shootings from 2014 - Present (November 20th, 2021) </li>
+<li> Quarter, month of the year, and day of the week with the most mass shootings incidents </li>
+<li> Locations (State and Cities) in the United States with the most mass shooting incidents </li>
+<li> Total Number of victims per mass shooting incident </li>
+<li> Understand Sentiments in the new trends of unregulated/serialized gun ownership in the US </li>
+
+<center> <h2> DATA </h2> </center>
+
+#### Data Source:  
+The data used in this analysis was obtained from [Gun Violence Archive (GVA)](https://www.gunviolencearchive.org/). GVA is a non-profit organization that collects and aggregates all verifiable gun violence incidents in the United States for easy access for anyone on their website. According to GVA, mass shootings are defined as mass shooting incidents where there are at least 4 victims.
+
+#### Data Collection:  
+We used the mass shootings data from 2014 to 2021 available on the GVA website. The current year(2021) does not contain full data, so we used a cut off date of November 20th, 2021 for the current year.  
+
+<li> <b>csv</b>: We downloaded the csv files for mass shootings from 2014 - 2021 </li>
+<li> <b>API</b>: We used google API to get the longitude and latitude of all locations of mass shooting incidents in the US according to 2014 - 2021 data from GVA. </li>  
+<li> <b>Web</b>: We web scrapped 3 News articles to perform sentiment analysis on opinions of Ghost Guns</li>  
+
+#### Data Preparation:  
+After downloading the data on mass shooting from 2014 - 2021 separately from the GVA website, we hosted them on the [github repository](https://github.com/chinedu2301/data607-project-gun-violence), then read those files individually into "R", and combined the whole datasets into one(1) dataset called `mass_shooting` and stored that in github as well. The original data source did not have the longitude and latitude of the locations of incidents that was necessary in order to develop the leaflet map, so we used google API from the `ggmap` package to obtain the longitude and latitude of all locations of mass_shootings incidents by passing the complete address ("Geo_Address") as argument to the `mutate_geocode()` function (Note: The function requires an API key from google to work) from `ggmap` package. The data preparation codes can be found in another document located [here](https://github.com/chinedu2301/data607-project-gun-violence/blob/main/data607-data-preparation.Rmd)
+
+#### Variables:  
+There are 10 variables in this dataset with 3,335 observations. The total observations indicate the total number of mass shooting incidents in the United States from 2014 to 2021 (November 20th, 2021).  
+
+The variables in the dataset are:
+<li> <b>Incident_ID</b>: Unique ID for each mass shooting incident </li>
+<li> <b>Incident_date</b>: Actual date that the incident occurred </li>
+<li> <b>State</b>: State where the incident occurred </li>
+<li> <b>City</b>: City where the incident occurred </li>
+<li> <b>Address</b>: Address where the incident occurred. </li>
+<li> <b>No_injured</b>: Number of individuals that were injured in a given mass shooting incident </li>
+<li> <b>No_killed</b>: Number of individuals killed in a mass shooting incident </li>
+<li> <b>Geo_Address</b>: Geo_address where the incident occurred. Gotten from combining Address, City, and State </li>
+<li> <b>lon</b>: Longitude of the location of incident gotten from google API by passing the Geo_Address as argument </li>
+<li> <b>lat</b>: Latitude of the location of incident gotten from google API by passing the Geo_Address as argument</li>
+
+
+<center> <h2> ANALYSIS </h2> </center>
+**Required Libraries**  
+```{r load-lib, warning=FALSE, message=FALSE}
+# Load Libraries
+library(tidyverse)
+library(lubridate)
+library(stringr)
+library(leaflet)
+library(sp)
+library(ggmap)
+library(leaflet.extras)
+library(htmltools)
+library(plotly)
+library(gridExtra)
+library(scales)
+library(ggrepel)
+library(rgdal)
+library(xml2)
+library(rvest)
+library(stringr)
+library(stringi)
+library(reactable) 
+library(syuzhet)
+library(tm)
+library(wordcloud)
+```
+
+**Load the data: ** The the data from a github repo:  
+```{r read-data, warning=FALSE, message=FALSE}
+# read the file
+url <- "https://raw.githubusercontent.com/chinedu2301/data607-project-gun-violence/main/Data/mass_shooting.csv"
+mass_shooting <- read_csv(url)
+mass_shooting <- mass_shooting %>% select(Incident_ID:lat)
+```
+
+**Check the head**
+```{r head}
+# Look at the head of the data
+head(mass_shooting)
+```
+**Use glimpse to check the column types**  
+```{r glimpse}
+glimpse(mass_shooting)
+```
+
+### Mass Shootings Analysis - DateTime {.tabset}  
+
+#### Mass Shootings by Year  
+
+```{r ms-by-year}
+# extract year from date using the lubridate year() function
+mass_shooting$year <- year(mass_shooting$Incident_date) 
+
+# plot a bar chart to show the distribution of mass shooting incidents by year
+ms_year <- mass_shooting %>%
+        ggplot(aes(x=as.factor(year))) + geom_bar(stat='count', fill='purple') +
+        scale_y_continuous(labels=comma) + labs(x='Year', y='Total Incidents', title='Incidents by year') + 
+        geom_label(stat = "count", aes(label = ..count.., y = ..count..)) + 
+        theme_bw() + theme(plot.title = element_text(hjust = 0.5)) + 
+        labs(title = "Mass Shooting Incidents by Year", 
+             subtitle = "Mass shootings increased from 2018") + 
+        theme(panel.background = element_rect(fill = "floralwhite"),
+            plot.background = element_rect(fill = "cornsilk")) +
+        labs(subtitle = NULL, caption = "Mass shootings increased from 2018")
+
+# display the chart
+ms_year
+```
+
+#### Mass Shootings by Quarter
+```{r ms-by-quarter}
+# extract Quarters from date
+mass_shooting$quarter <- quarter(mass_shooting$Incident_date) 
+
+# plot a bar chart to show the distribution of mass shooting incidents by quarter
+ms_quarter <- mass_shooting %>% filter(year!=2013) %>% select(year, quarter) %>% group_by(year) %>%
+  count(quarter) %>%
+  ggplot(aes(x=as.factor(quarter), y=n, fill = quarter)) + geom_bar(stat='identity') + 
+        scale_y_continuous(labels=comma) + facet_grid(.~year) + 
+  labs(x='Quarter', y='Total Incidents', title='Incidents by Quarter') + 
+  theme(plot.title =    element_text(hjust = 0.5),
+        plot.background = element_rect(fill = "cornsilk")) + 
+  labs(title = "Mass Shooting Incidents by Quarter",
+        subtitle = "The third quarter has the most incidents except for 2019") + 
+  theme_bw() + theme(plot.title = element_text(hjust = 0.5),
+        panel.background = element_rect(fill = "beige"),
+        plot.background = element_rect(colour = "coral4")) +
+  labs(subtitle = NULL, caption = "The third quarter has the most mass shooting incidents except for 2019") +   theme(plot.background = element_rect(fill = "cornsilk"))
+
+# display the chart
+ms_quarter
+```
+
+#### Mass Shootings by Month  
+```{r ms-by-month}
+# extract month from date using the lubridate year() function
+mass_shooting$month <- month(mass_shooting$Incident_date, label=TRUE)
+
+# plot a chart to show the distribution of mass shooting incidents by month
+ms_month <- mass_shooting %>% count(month) %>%
+        ggplot(aes(x=month, y=n)) + geom_bar(stat='identity', fill='purple') +
+        scale_y_continuous(labels=comma) +
+        labs(x='month', y='Total Incidents', title='Incidents by month') + theme_bw() + 
+        theme(plot.title = element_text(hjust = 0.5),
+            panel.background = element_rect(fill = "beige"),
+            plot.background = element_rect(fill = "cornsilk")) +
+        labs(title = "Mass Shooting Incidents by Month",
+            x = "Month", caption = "July has the most number of incidents followed by June considering all incidents from 2014 - 2021")
+
+# display the chart
+ms_month
+```
+
+#### Mass Shootings by Weekday
+```{r ms-by-wday}
+# extract day from date using lubridate wday() function
+mass_shooting$weekday <- wday(mass_shooting$Incident_date, label=TRUE)
+
+# Plot a chart to see the distribution by weekday
+ms_wday <- mass_shooting %>% count(weekday) %>%
+        ggplot(aes(x=weekday, y=n)) + geom_bar(stat='identity', fill=rainbow(n=7)) +
+            scale_y_continuous(labels=comma) +
+            labs(x='Weekday', y='Number of incidents', title='Incidents by Weekday') + theme_bw() + theme(plot.title = element_text(hjust = 0.5),
+    panel.background = element_rect(fill = "floralwhite"),
+    plot.background = element_rect(fill = "cornsilk")) +labs(title = "Mass Shooting Incidents by Weekday",
+    y = "Total Incidents", caption = "Most mass shooting incidents occur on Saturday and Sundays (weekends)")
+
+# display the chart
+ms_wday
+```
+
+### {-}  
+
+
+### Mass Shootings Analysis - Location {.tabset}  
+
+#### Mass Shootings by State - Map  
+```{r ms-by-state-leaflet-map}
+# filter the datasets for each year
+ms_2014 <- mass_shooting %>% filter(year(Incident_date) == 2014)
+ms_2015 <- mass_shooting %>% filter(year(Incident_date) == 2015)
+ms_2016 <- mass_shooting %>% filter(year(Incident_date) == 2016)
+ms_2017 <- mass_shooting %>% filter(year(Incident_date) == 2017)
+ms_2018 <- mass_shooting %>% filter(year(Incident_date) == 2018)
+ms_2019 <- mass_shooting %>% filter(year(Incident_date) == 2019)
+ms_2020 <- mass_shooting %>% filter(year(Incident_date) == 2020)
+ms_2021 <- mass_shooting %>% filter(year(Incident_date) == 2021)
+
+# Instantiate a leaflet map and plot map
+ms_map <- leaflet() %>% addTiles() %>% 
+  setView(lng = -95.7129, lat = 37.0902 , zoom = 4 ) %>%
+  addCircleMarkers(data = ms_2014, lng = ~lon, lat = ~lat, radius = 1,
+                   popup = ~paste0("Incident Date: ", Incident_date, "<br>",
+                                   "Address: ", Geo_Address, "<br>",
+                                   "Number Killed: " , No_killed, "<br>",
+                                   "Number Injured: ", No_injured),
+                   color = "magenta",
+                   group = "2014") %>%
+  addCircleMarkers(data = ms_2015, lng = ~lon, lat = ~lat, radius = 1,
+                   popup = ~paste0("Incident Date: ", Incident_date, "<br>",
+                                   "Address: ", Geo_Address, "<br>",
+                                   "Number Killed: " , No_killed, "<br>",
+                                   "Number Injured: ", No_injured),
+                   color = "blue",
+                   group = "2015") %>% 
+  addCircleMarkers(data = ms_2016, lng = ~lon, lat = ~lat, radius = 1,
+                   popup = ~paste0("Incident Date: ", Incident_date, "<br>",
+                                   "Address: ", Geo_Address, "<br>",
+                                   "Number Killed: " , No_killed, "<br>",
+                                   "Number Injured: ", No_injured),
+                   color = "green",
+                   group = "2016") %>% 
+  addCircleMarkers(data = ms_2017, lng = ~lon, lat = ~lat, radius = 1,
+                   popup = ~paste0("Incident Date: ", Incident_date, "<br>",
+                                   "Address: ", Geo_Address, "<br>",
+                                   "Number Killed: " , No_killed, "<br>",
+                                   "Number Injured: ", No_injured),
+                   color = "brown",
+                   group = "2017") %>% 
+  addCircleMarkers(data = ms_2017, lng = ~lon, lat = ~lat, radius = 1,
+                   popup = ~paste0("Incident Date: ", Incident_date, "<br>",
+                                   "Address: ", Geo_Address, "<br>",
+                                   "Number Killed: " , No_killed, "<br>",
+                                   "Number Injured: ", No_injured),
+                   color = "purple",
+                   group = "2018") %>% 
+  addCircleMarkers(data = ms_2016, lng = ~lon, lat = ~lat, radius = 1,
+                   popup = ~paste0("Incident Date: ", Incident_date, "<br>",
+                                   "Address: ", Geo_Address, "<br>",
+                                   "Number Killed: " , No_killed, "<br>",
+                                   "Number Injured: ", No_injured),
+                   color = "black",
+                   group = "2019") %>% 
+  addCircleMarkers(data = ms_2020, lng = ~lon, lat = ~lat, radius = 1,
+                   popup = ~paste0("Incident Date: ", Incident_date, "<br>",
+                                   "Address: ", Geo_Address, "<br>",
+                                   "Number Killed: " , No_killed, "<br>",
+                                   "Number Injured: ", No_injured),
+                   color = "orange",
+                   group = "2020") %>% 
+  addCircleMarkers(data = ms_2021, lng = ~lon, lat = ~lat, radius = 1,
+                   popup = ~paste0("Incident Date: ", Incident_date, "<br>",
+                                   "Address: ", Geo_Address, "<br>",
+                                   "Number Killed: " , No_killed, "<br>",
+                                   "Number Injured: ", No_injured),
+                   color = "red",
+                   group = "2021") %>% 
+  addLayersControl(baseGroups = c("2014", "2015", "2016", "2017", "2018", "2019", "2020", "2021")) 
+
+# display the chart
+ms_map
+```
+
+
+#### Mass Shootings by States - Bar Chart  
+
+```{r ms-by-state}
+# plot the mass shooting incidents by state 
+ms_state <- plotly:: ggplotly(mass_shooting %>% count(State) %>%
+        ggplot(aes(x=reorder(State, n), y=n, fill=n, text=State)) +
+        geom_bar(stat='identity', fill='red') + coord_flip() +
+            labs(x='', y='Number of incidents') + theme(plot.title = element_text(hjust = 0.5),
+            panel.background = element_rect(fill = "lightyellow"),
+            plot.background = element_rect(fill = "cornsilk")) +labs(title = "Mass Shootings by State",
+    x = NULL, y = "Total Incidents", caption = "Illinois, California, New York, and Pennsylvania has the most shootings") + theme(axis.line = element_line(size = 0.5)))
+
+# display the chart
+ms_state
+```
+
+### {-}  
+
+### Mass Shooting Analysis - Victims {.tabset}
+
+#### Top Ten(10) Incidents by Number of Victims  
+
+*Las Vegas mass shooting of October 1st, 2021 has the highest number of victims with 500 recorded victims*
+
+```{r ms-top-10-victims}
+# Create a column for total victims
+mass_shooting$victims <- mass_shooting$No_killed + mass_shooting$No_injured
+
+# Subset the data for the top 10 victims
+ms_top_10 <- mass_shooting %>% 
+  select(Incident_date, State, City, No_killed, No_injured, victims) %>% 
+  arrange(desc(victims)) %>% top_n(n=10, wt=victims)
+
+# display the table
+ms_top_10
+```
+
+#### Victims per Incident  
+
+*The State of Illinois has the highest number of victims*  
+
+```{r ms-state-incidents}
+# Create mass shooting victims columns
+mass_shooting$victims <- mass_shooting$No_killed + mass_shooting$No_injured
+
+# 
+ms_victims_by_state <- mass_shooting %>% group_by(State)  %>%   summarize(sumVic=sum(victims), sumInj=sum(No_injured), sumDeath=sum(No_killed), PercDeath=round(sumDeath/sumVic,2), sumIncidents=n(), vicPerInc=round(sumVic/sumIncidents,1)) %>% arrange(desc(sumVic))
+
+# display the data
+ms_victims_by_state
+```
+
+#### Victims per Incident - Chart 
+
+```{r ms-state-victims-per-incident-chart}
+# plot the chart for victims per incident by state
+ms_victims_state_map <- ms_victims_by_state %>% filter(vicPerInc > 5) %>%
+        ggplot(aes(x=reorder(State, -vicPerInc), y=vicPerInc)) + geom_bar(stat='identity', fill='red') +
+        labs(x='State', y='Victims per incidents') + geom_text(aes(label = vicPerInc), vjust = 0) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) + theme_bw() + coord_flip() +                        theme(plot.title = element_text(hjust = 0.5),
+            panel.background = element_rect(fill = "beige"),
+            plot.background = element_rect(fill = "cornsilk")) +labs(title = "Victims per Incidents by State",
+            caption = "Nevada has the most victims per incident because of the single shooting in Las Vegas in 2017 that had about 500 victims")
+
+# display the chart
+ms_victims_state_map
+```
+
+### {-}  
+
+### New Trends: Ghost Guns  
+
+
+[Evolving Trend - Unserialized and Untraceable FireArms]{style="color: red;"}
+![Science \| HowStuffWorks](ghost_guns.jpg)
+
+<br>
+**What are Ghost Guns?: **  
+*Ghost guns are unserialized and untraceable firearms that are constructed by individuals using unfinished frames or receivers. They are available for purchase by anyone, including prohibited purchasers, domestic abusers, and gun traffickers -- without a background check.*  
+
+*The current gun laws do not require a background check to purchase a ghost gun kit or parts because the receivers and frames are unfinished. An individual can legally purchase a receiver or frame that is 80% complete or less, then modify the parts with a drill press or power drill, router jig, and other components into an effective and reliable firearm.*  
+
+### Sentiments on Ghost Guns {.tabset}  
+
+Ghost Guns are becoming more common, so we decided to do a sentiment analysis on what the public think about ghost guns using articles from three(3) different media outlets. So wee web-scrapped Newspaper articles with `xml2 and rvest package` and making use of the `SelectorGadget` chromes extension. The articles are:
+<li> The Federalist - [3-D Printed Guns Are A Reminder That Gun Control In America Is Futile](https://thefederalist.com/2018/08/02/3-d-printed-guns-reminder-gun-control-america-futile)</li>
+<li> The Guardian - [Ordered online, assembled at home: the deadly toll of California's 'ghost guns'](https://www.theguardian.com/us-news/2021/may/18/california-ghost-guns-deadly-toll)</li>
+<li> Chicago Tribune - [Ghost guns: What they are, and why they are an issue now](https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html)</li>  
+
+<br>
+
+#### Web Scrapping News Article  
+
+*Web Scrape The Federalist Article*
+```{r webscrape-federalist}
+# webscrape the federalist article on ghost guns
+url_federalist <- "https://thefederalist.com/2018/08/02/3-d-printed-guns-reminder-gun-control-america-futile/"
+federalist_root_html <- read_html(url_federalist)
+federalist_body <- federalist_root_html %>%
+  html_nodes("p") %>%  # indicates node name
+  html_text(trim = TRUE) 
+
+names(federalist_body) <- c("newspaper") # insert new column for newspaper name
+
+federalist_body <- as_tibble(federalist_body)
+
+federalist_body$newspaper <- "Federalist"
+
+```
+
+*Web Scrape The Tribune Article*  
+```{r webscrape-tribune}
+# webscrape the tribune article on ghost guns
+url_tribune <- "https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html"
+tribune_root_html <- read_html(url_tribune)
+tribune_body<- tribune_root_html %>%
+  html_nodes(".heavy-text , .crd--cnt p") %>% # indicates nodes name
+  html_text(trim = TRUE) 
+
+names(tribune_body) <- c("newspaper")
+
+tribune_body <- as_tibble(tribune_body)
+
+tribune_body$newspaper <- "Tribune"
+```
+
+*Web Scrape The Guardian Article*  
+
+```{r webscrape-guardian}
+# webscrape the guardian article on ghost guns
+url_guardian <- "https://www.theguardian.com/us-news/2021/may/18/california-ghost-guns-deadly-toll"
+guardian_root_html <- read_html(url_guardian)
+guardian_body <- guardian_root_html %>%
+  html_nodes("h2 , .dcr-o5gy41") %>%  # indicates nodes name
+  html_text(trim = TRUE)
+
+names(guardian_body) <- c("newspaper")
+
+guardian_body <- as_tibble(guardian_body)
+
+guardian_body$newspaper <- "Guardian"
+```
+
+#### Create Corpus  
+
+*The corpus will store the newspapers textual data, `body`, for text analysis*  
+```{r create-corpus}
+# combine all three web scrapped articles into a corpus
+corpus <- rbind(federalist_body, guardian_body, tribune_body)
+
+# create corpus
+corpus <- Corpus(VectorSource(corpus))
+
+#inspect(corpus)
+```
+
+*Transform/Clean the Corpus*  
+Transform and clean the corpus
+```{r clean-corpus, warning=FALSE, message=FALSE}
+# clean the corpus
+corpus_text <- tm_map(corpus[1], tolower)
+corpus_text <- tm_map(corpus_text, removePunctuation)
+corpus_text <- tm_map(corpus_text, removeNumbers)
+cleanset <- tm_map(corpus_text, removeWords, stopwords('english'))
+```
+
+**Create a Term-document matrix**  
+
+```{r text-mining}
+# text mining
+tdm <- TermDocumentMatrix(cleanset)
+tdm <- as.matrix(tdm)
+
+words <- sort(rowSums(tdm), decreasing = TRUE)
+
+df <- data.frame(word = names(words), freq = words)
+
+head(df, 5)
+```
+
+
+The term-document matrix (tdm) will compare all the terms or words across each document. The tdm results was sorted and summarized in a decreasing order. The selected `Ghost Guns Articles` top 5 frequent words pertain to `gun, guns, ghost, said, and violence`.  
+
+#### Word Cloud  
+
+Visualization of the most common words
+```{r word-cloud}
+most_word <- sort(rowSums(tdm), decreasing = TRUE)
+set.seed(222)
+wordcloud(words = names(most_word),
+          freq = most_word,
+          max.words = 500,
+          random.order = F,
+          min.freq = 3,
+          colors = brewer.pal(8, 'Dark2'),
+          scale = c(6, 0.4),
+          rot.per = 0.7)
+```
+
+From the word cloud, we can see that "gun", "guns", "ghost", "violence", and "said" are the five(5) most important words in the corpus.  
+
+#### Sentiment Analysis  
+
+The sentiment lexicon used is the `syuzhet package` which will pull out the emotions from the selected newspaper articles. The issue of controlling the expanding ghost gun accessibility has a slightly huger negative emotion than positive. The next three emotions, fear, anger, and trust, also indicates the impact of a ghost gun as a firearm.
+
+```{r sentiment-score}
+# get sentiment lexicon
+sentiment <- get_nrc_sentiment(df$word)
+
+# display the table of sentiments
+head(sentiment, 5)
+```
+
+```{r sentiment-plot}
+# Barplot
+barplot(colSums(sentiment),
+        las = 2,
+        col = rainbow(10),
+        ylab = 'Count',
+        main = 'Sentiment Scores Issue')
+```
+
+### {-}
+
+<br>
+<br>
+
+<center><h2>FINAL CONCLUSIONS ON MASS SHOOTINGS</h2></center>  
+From the analysis using the dataset from GVA, we found that there has been an overall upward trend in mass shootings incidents in the United States from 2014 to present with a major increase from 2019 to 2020. Also, we found that the months of July and June have the most incidents of mass shootings. Furthermore, there are more mass shootings on Sundays and Saturdays (weekends) than other weekdays. In addition, Illinois (Chicago), California, Texas, Florida, and New York are the top states with the most incidents of mass shootings, and there is an average of 5 - 6 victims per mass shooting incident.  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
