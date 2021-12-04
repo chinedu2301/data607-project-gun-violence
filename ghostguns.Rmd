@@ -32,8 +32,8 @@ library(wordcloud)
 
 ![Science \| HowStuffWorks](ghost_guns.jpg)
 
-| What are ghost guns?
-| *Ghost guns are unserialized and untraceable firearms that are constructed by individuals using unfinished frames or receivers. They are available for purchase by anyone, including prohibited purchasers, domestic abusers, and gun traffickers -- without a background check.*
+What are ghost guns?
+*Ghost guns are unserialized and untraceable firearms that are constructed by individuals using unfinished frames or receivers. They are available for purchase by anyone, including prohibited purchasers, domestic abusers, and gun traffickers -- without a background check.*
 
 <br></br>  Federal Regulations
 
@@ -48,22 +48,16 @@ library(wordcloud)
 [Webscrape Newspaper Articles with `xml2 and rvest package`]{style="color: blue;"} <br></br> URL links the selected newspaper articles was loaded, each individual text body was selected with [SelectorGadget](https://selectorgadget.com/) in Chrome. The `SelectorGadget` extracted the HTML nodes form these newspapers article text-body:
 
 <p>
-
 1.  The Federalist - [3-D Printed Guns Are A Reminder That Gun Control In America Is Futile](https://thefederalist.com/2018/08/02/3-d-printed-guns-reminder-gun-control-america-futile)
+</p>
 
-    </p>
+<p>
+2.  The Guardian - [Ordered online, assembled at home: the deadly toll of California's 'ghost guns'](https://www.theguardian.com/us-news/2021/may/18/california-ghost-guns-deadly-toll)
+</p>
 
-    <p>
-
-    2.  The Guardian - [Ordered online, assembled at home: the deadly toll of California's 'ghost guns'](https://www.theguardian.com/us-news/2021/may/18/california-ghost-guns-deadly-toll)
-
-        </p>
-
-        <p>
-
-        3.  Chicago Tribune - [Ghost guns: What they are, and why they are an issue now](https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html)
-
-            </p>
+<p>
+3.  Chicago Tribune - [Ghost guns: What they are, and why they are an issue now](https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html)
+</p>
 
 ```{r federalist-body}
 
@@ -176,9 +170,9 @@ wordcloud(words = names(w),
 
 The above word cloud clearly shows that "gun", "guns", "ghost", "violence", and "said" are the five most important words in the Corpus.
 
-### Sentiment Analysis
+### Public Sentiment Analysis
 
-The `syuzhet package` will pull out the emotions from the selected newspaper articles. The issue of controlling the expanding ghost gun accessibility has a slightly huger negative emotion than positive. The next three emotions, fear, anger, and trust, also indicates the impact of a ghost gun as a firearm.
+The `syuzhet package` will pull out the eight basic emotions as well as positive and negative sentiment from the selected newspaper articles. The expanding  accessibility of ghost guns (aka: homemade weapons, or do-it-yourself guns) in our communities may create disparity where negative and positive sentiments are equally influential on emotions. The highest three emotions: fear, anger, and trust, also indicates the level of intensity a ghost gun as a firearm.
 
 ```{r sentiment-score, echo=FALSE}
 s <- get_nrc_sentiment(df$word)
@@ -192,3 +186,9 @@ barplot(colSums(s),
         ylab = 'Count',
         main = 'Sentiment Scores Issue')
 ```
+
+
+### Conclusion
+
+The selected articles are based on three political views towards ghost guns. The sentiment scores shows a high intensity of *fear* and it signals that society recognizes the influence ghost guns play in mass shootings, as an undetectable, unregulated, firearm. Although the federal Bureau of Alcohol, Tobacco, and Firearms (ATF) and state agencies enforces gun laws, ghost guns are not defined as " a firearm".
+
