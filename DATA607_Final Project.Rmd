@@ -27,7 +27,7 @@ head(mass_shooting)
 ```
 
 ```{r}
-str(mass_shooting)
+glimpse(mass_shooting)
 ```
 
 
@@ -40,7 +40,7 @@ mass_shooting$year <- year(mass_shooting$Incident_date) #extract year from date 
 
 mass_shooting %>%
         ggplot(aes(x=as.factor(year))) + geom_bar(stat='count', fill='purple') +
-        scale_y_continuous(labels=comma) +
+        scale_y_continuous(labels=comma) + labs(x='Year', y='No of Incident', title='Incidents by year') + 
         geom_label(stat = "count", aes(label = ..count.., y = ..count..))
 ```
 
@@ -52,15 +52,15 @@ mass_shooting %>%
 mass_shooting$quarter <- quarter(mass_shooting$Incident_date) #extract Quarters from date
 
 q1 <- mass_shooting %>% filter(year!=2013) %>% select(year, quarter) %>% group_by(year) %>% count(quarter) %>%
-        ggplot(aes(x=as.factor(quarter), y=n)) + geom_bar(stat='identity', fill='red') + 
-        scale_y_continuous(labels=comma) + facet_grid(.~year) + labs(x='Quarter', y='Number of incidents') 
+        ggplot(aes(x=as.factor(quarter), y=n, fill = quarter)) + geom_bar(stat='identity') + 
+        scale_y_continuous(labels=comma) + facet_grid(.~year) + labs(x='Quarter', y='Number of incidents', title='Incidents by Quarter') 
 q1
 ```
 
 
 ###     Mass shooting incident by Month
 
-**From year 2014 till date, the month of June has recorded the highest number of mass shooting incident with over 450 incident**
+**From year 2014 till date, the month of July has recorded the highest number of mass shooting incident with over 450 incident**
 
 ```{r}
 mass_shooting$month <- month(mass_shooting$Incident_date, label=TRUE)
@@ -86,9 +86,9 @@ mass_shooting %>% count(weekday) %>%
 ```
 
 
-**Illinois has the highest incident of mass shooting while  New Hampshire has the least number of gun violence.**
+**Illinois has the highest incident of mass shooting while  New Hampshire has the least number of mass shooting.**
 
-###   Gun Violence Incident by State.
+###   Mass shooting Incident by State.
 
 ```{r}
 plotly::ggplotly(mass_shooting %>% count(State) %>%
@@ -111,16 +111,18 @@ Top10 <- mass_shooting %>% select(Incident_date, State, City, No_killed, No_inju
 Top10
 ```
 
+###   Victim per incident.
+
 **Illinois has the Highest number of victims recorded for mass shooting while wyoming has the the lowest number of victims recorded from year 2014 till Nov 20th, 2021.**
 
 ```{r}
 mass_shooting$victims <- mass_shooting$No_killed + mass_shooting$No_injured
 
 VictimsByState <- mass_shooting %>% group_by(State)  %>%   summarize(sumVic=sum(victims), sumInj=sum(No_injured), sumDeath=sum(No_killed), PercDeath=round(sumDeath/sumVic,2), sumIncidents=n(), vicPerInc=round(sumVic/sumIncidents,1)) %>% arrange(desc(sumVic))
-head(VictimsByState)
+VictimsByState
 ```
 
-###   Victims by state
+###   Victims per incident in descending order
 
 
 ```{r}
