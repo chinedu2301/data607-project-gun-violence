@@ -360,7 +360,7 @@ ms_victims_state_map
 
 ### Sentiments on Ghost Guns {.tabset}  
 
-Ghost Guns are becoming more common, so we decided to do a sentiment analysis on what the public think about ghost guns using articles from three(3) different media outlets. So wee web-scrapped Newspaper articles with `xml2 and rvest package` and making use of the `SelectorGadget` chromes extension. The articles are:
+Ghost Guns are becoming more common, so we decided to do a sentiment analysis on what the public think about ghost guns using articles from three(3) different media outlets. So we web-scrapped Newspaper articles with `xml2 and rvest package` and making use of the `SelectorGadget` chromes extension. The articles are:
 <li> The Federalist - [3-D Printed Guns Are A Reminder That Gun Control In America Is Futile](https://thefederalist.com/2018/08/02/3-d-printed-guns-reminder-gun-control-america-futile)</li>
 <li> The Guardian - [Ordered online, assembled at home: the deadly toll of California's 'ghost guns'](https://www.theguardian.com/us-news/2021/may/18/california-ghost-guns-deadly-toll)</li>
 <li> Chicago Tribune - [Ghost guns: What they are, and why they are an issue now](https://www.chicagotribune.com/nation-world/ct-aud-nw-nyt-cb-ghost-guns-20210409-v7osb6gxvfgdneo6z7v5dupdt4-story.html)</li>  
@@ -479,7 +479,7 @@ From the word cloud, we can see that "gun", "guns", "ghost", "violence", and "sa
 
 #### Sentiment Analysis  
 
-The sentiment lexicon used is the `syuzhet package` which will pull out the emotions from the selected newspaper articles. The issue of controlling the expanding ghost gun accessibility has a slightly huger negative emotion than positive. The next three emotions, fear, anger, and trust, also indicates the impact of a ghost gun as a firearm.
+The sentiment lexicon used is the `syuzhet package` which will pull out the eight basic emotions as well as positive and negative sentiment from the selected newspaper articles. The expanding  accessibility of ghost guns (aka: homemade weapons, or do-it-yourself guns) in our communities may create disparity where negative and positive sentiments are equally influential on emotions. The highest three emotions: fear, anger, and trust, also indicates the level of intensity a ghost gun as a firearm.
 
 ```{r sentiment-score}
 # get sentiment lexicon
@@ -504,7 +504,7 @@ barplot(colSums(sentiment),
 <br>
 
 <center><h2>FINAL CONCLUSIONS ON MASS SHOOTINGS</h2></center>  
-From the analysis using the dataset from GVA, we found that there has been an overall upward trend in mass shootings incidents in the United States from 2014 to present with a major increase from 2019 to 2020. Also, we found that the months of July and June have the most incidents of mass shootings. Furthermore, there are more mass shootings on Sundays and Saturdays (weekends) than other weekdays. In addition, Illinois (Chicago), California, Texas, Florida, and New York are the top states with the most incidents of mass shootings, and there is an average of 5 - 6 victims per mass shooting incident.  
+From the analysis using the dataset from GVA, we found that there has been an overall upward trend in mass shootings incidents in the United States from 2014 to present with a major increase from 2019 to 2020. Also, we found that the months of July and June have the most incidents of mass shootings. Furthermore, there are more mass shootings on Sundays and Saturdays (weekends) than other weekdays. In addition, Illinois (Chicago), California, Texas, Florida, and New York are the top states with the most incidents of mass shootings, and there is an average of 5 - 6 victims per mass shooting incident. Also from the sentiment analysis of the three political views towards ghost guns, the sentiment scores shows a high intensity of *fear* and it signals that society recognizes the influence ghost guns play in mass shootings, as an undetectable, unregulated, firearm. Although the federal Bureau of Alcohol, Tobacco, and Firearms (ATF) and state agencies enforces gun laws, ghost guns are not defined as " a firearm".
 
 
 
